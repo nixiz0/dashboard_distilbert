@@ -3,9 +3,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import matplotlib.pyplot as plt
 import tensorflow as tf
-from wordcloud import WordCloud
 from collections import Counter
 from dotenv import load_dotenv
 from azure.storage.blob import BlobServiceClient
@@ -33,9 +31,6 @@ st.write(data.head())
 # Create a dictionary to map numbers to emotion names
 emotion_dict = {0: 'Sadness', 1: 'Joy', 2: 'Love', 3: 'Anger', 4: 'Fear', 5: 'Surprise'}
 
-# Replace numbers with names in the DataFrame
-data['label'] = data['label'].map(emotion_dict)
-
 st.markdown(f"<h4 style='font-size: {font_size}; color: white;'>Emotions legend :</h4>", unsafe_allow_html=True)
 st.markdown(f"<div style='font-size: {font_size}; color: white;'>- sadness : 0</div>", unsafe_allow_html=True)
 st.markdown(f"<div style='font-size: {font_size}; color: white;'>- joy : 1</div>", unsafe_allow_html=True)
@@ -44,8 +39,17 @@ st.markdown(f"<div style='font-size: {font_size}; color: white;'>- anger : 3</di
 st.markdown(f"<div style='font-size: {font_size}; color: white;'>- fear : 4</div>", unsafe_allow_html=True)
 st.markdown(f"<div style='font-size: {font_size}; color: white;'>- surprise : 5</div>", unsafe_allow_html=True)
 
-# Calculate the number of each label
-label_counts = data['label'].value_counts().sort_values(ascending=False)
+@st.cache_data
+def preprocess_data(data):
+    # Replace numbers with names in the DataFrame
+    data['label'] = data['label'].map(emotion_dict)
+    # Calculate the number of each label
+    label_counts = data['label'].value_counts().sort_values(ascending=False)
+    # Sentence size analysis
+    data['text_length'] = data['text'].apply(len)
+    return data, label_counts
+
+data, label_counts = preprocess_data(data)
 
 # Analysis of the distribution of labels
 st.markdown(f"<h3 style='font-size: {font_size}; color: white; text-align: center;'>Analysis of the distribution of labels</h3>", unsafe_allow_html=True)
@@ -56,7 +60,6 @@ st.plotly_chart(fig)
 
 # Sentence size analysis
 st.markdown(f"<h3 style='font-size: {font_size}; color: white; text-align: center;'>Sentence size</h3>", unsafe_allow_html=True)
-data['text_length'] = data['text'].apply(len)
 fig = px.histogram(data, x='text_length', color_discrete_sequence=px.colors.qualitative.Pastel)
 st.plotly_chart(fig)
 
@@ -72,11 +75,7 @@ st.plotly_chart(fig)
 
 # WordCloud
 st.markdown(f"<h3 style='font-size: {font_size}; color: white; text-align: center;'>WordCloud</h3>", unsafe_allow_html=True)
-wordcloud = WordCloud(width=800, height=400, random_state=21, max_font_size=110).generate(' '.join(data['text']))
-fig, ax = plt.subplots()
-ax.imshow(wordcloud, interpolation="bilinear")
-ax.axis('off')
-st.pyplot(fig)
+st.image('wordcloud_img.png')
 
 st.markdown("---")
 
@@ -95,19 +94,20 @@ def download_from_azure_storage(file_name):
         
 download_from_azure_storage('distilbert_best_model_weights.h5')
 
-# Load tokenizer_distilbert and model
-tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+def load_model():
+    # Load tokenizer_distilbert and model
+    tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+    # Load the architecture of the model
+    model = TFDistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=6)
+    # Compile the model
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=5e-5),
+                  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                  metrics=['accuracy'])
+    # Load the weights of the model
+    model.load_weights('distilbert_best_model_weights.h5')
+    return tokenizer, model
 
-# Load the architecture of the model
-model = TFDistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=6)
-
-# Compile the model
-model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=5e-5),
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-              metrics=['accuracy'])
-
-# Load the weights of the model
-model.load_weights('distilbert_best_model_weights.h5')
+tokenizer, model = load_model()
 
 # Emotion prediction
 st.markdown(f"<h2>Emotion prediction</h2>", unsafe_allow_html=True)
