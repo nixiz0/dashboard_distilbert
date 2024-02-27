@@ -85,6 +85,7 @@ azure_storage_account_key = os.getenv('AZURE_BLOB_KEY')
 azure_storage_account_name = "distilbert"
 container_name = "modeldistilbert"
 
+@st.cache_resource
 def download_from_azure_storage():
     blob_service_client = BlobServiceClient.from_connection_string(
         f"DefaultEndpointsProtocol=https;AccountName={azure_storage_account_name};AccountKey={azure_storage_account_key}"
