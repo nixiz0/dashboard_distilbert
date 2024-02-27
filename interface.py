@@ -82,47 +82,47 @@ st.pyplot(fig)
 
 st.markdown("---")
 
-# load_dotenv('.azure_secret')
-# azure_storage_account_key = os.getenv('AZURE_BLOB_KEY')
-# azure_storage_account_name = "distilbert"
-# container_name = "modeldistilbert"
-# 
-# def download_from_azure_storage(file_name):
-#     blob_service_client = BlobServiceClient.from_connection_string(
-#         f"DefaultEndpointsProtocol=https;AccountName={azure_storage_account_name};AccountKey={azure_storage_account_key}"
-#     )
-#     blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_name)
-#     with open(file_name, "wb") as download_file:
-#         download_file.write(blob_client.download_blob().readall())
-#         
-# download_from_azure_storage('distilbert_best_model_weights.h5')
-# 
-# # Load tokenizer_distilbert and model
-# tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
-# 
-# # Load the architecture of the model
-# model = TFDistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=6)
-# 
-# # Compile the model
-# model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=5e-5),
-#               loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-#               metrics=['accuracy'])
-# 
-# # Load the weights of the model
-# model.load_weights('distilbert_best_model_weights.h5')
-# 
-# # Emotion prediction
-# st.markdown(f"<h2 style='font-size: {font_size}; color: white;'>Emotion prediction</h2>", unsafe_allow_html=True)
-# user_input = st.text_input(f"Enter your text here")
-# if user_input:
-#     user_input_vectorized = tokenizer.encode(user_input, return_tensors='tf')
-#     
-#     # Predict emotion & Get the predicted class
-#     prediction = model.predict(user_input_vectorized)
-#     predicted_class_indices = np.argmax(prediction.logits, axis=1)
-# 
-#     # Transform class indices to class names
-#     predicted_class_names = [emotion_dict[i] for i in predicted_class_indices]
-#     
-#     # Show predicted emotion
-#     st.write(f"The predicted emotion is : {predicted_class_names}")
+load_dotenv('.azure_secret')
+azure_storage_account_key = os.getenv('AZURE_BLOB_KEY')
+azure_storage_account_name = "distilbert"
+container_name = "modeldistilbert"
+
+def download_from_azure_storage(file_name):
+    blob_service_client = BlobServiceClient.from_connection_string(
+        f"DefaultEndpointsProtocol=https;AccountName={azure_storage_account_name};AccountKey={azure_storage_account_key}"
+    )
+    blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_name)
+    with open(file_name, "wb") as download_file:
+        download_file.write(blob_client.download_blob().readall())
+        
+download_from_azure_storage('distilbert_best_model_weights.h5')
+
+# Load tokenizer_distilbert and model
+tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+
+# Load the architecture of the model
+model = TFDistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=6)
+
+# Compile the model
+model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=5e-5),
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+
+# Load the weights of the model
+model.load_weights('distilbert_best_model_weights.h5')
+
+# Emotion prediction
+st.markdown(f"<h2 style='font-size: {font_size}; color: white;'>Emotion prediction</h2>", unsafe_allow_html=True)
+user_input = st.text_input(f"Enter your text here")
+if user_input:
+    user_input_vectorized = tokenizer.encode(user_input, return_tensors='tf')
+    
+    # Predict emotion & Get the predicted class
+    prediction = model.predict(user_input_vectorized)
+    predicted_class_indices = np.argmax(prediction.logits, axis=1)
+
+    # Transform class indices to class names
+    predicted_class_names = [emotion_dict[i] for i in predicted_class_indices]
+    
+    # Show predicted emotion
+    st.write(f"The predicted emotion is : {predicted_class_names}")
