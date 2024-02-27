@@ -91,8 +91,6 @@ def download_from_azure_storage(file_name):
     blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_name)
     with open(file_name, "wb") as download_file:
         download_file.write(blob_client.download_blob().readall())
-        
-download_from_azure_storage('distilbert_best_model_weights.h5')
 
 def load_model():
     # Load tokenizer_distilbert and model
@@ -107,6 +105,7 @@ def load_model():
     model.load_weights('distilbert_best_model_weights.h5')
     return tokenizer, model
 
+download_from_azure_storage('distilbert_best_model_weights.h5')
 tokenizer, model = load_model()
 
 # Emotion prediction
