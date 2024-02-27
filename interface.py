@@ -16,14 +16,12 @@ from transformers import DistilBertTokenizer, TFDistilBertForSequenceClassificat
 # <= streamlit run interface.py =>
 
 # User can select the text size
-size = st.selectbox('Select text size', ['Small', 'Medium', 'Large'])
+size = st.selectbox('Select text size', ['default', 'Large'])
 
-if size == 'Small':
-    font_size = '16px'
-elif size == 'Medium':
-    font_size = '20px'
-else:
-    font_size = '26px'
+if size == 'default':
+    font_size = '23px'
+elif size == 'Large':
+    font_size = '28px'
 
 data = pd.read_csv('data_explo/text_clean.csv')
 
@@ -112,7 +110,7 @@ model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=5e-5),
 model.load_weights('distilbert_best_model_weights.h5')
 
 # Emotion prediction
-st.markdown(f"<h2 style='font-size: {font_size}; color: white;'>Emotion prediction</h2>", unsafe_allow_html=True)
+st.markdown(f"<h2>Emotion prediction</h2>", unsafe_allow_html=True)
 user_input = st.text_input(f"Enter your text here")
 if user_input:
     user_input_vectorized = tokenizer.encode(user_input, return_tensors='tf')
