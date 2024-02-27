@@ -1,0 +1,4 @@
+__pycache__
+.env
+distilbert_best_model_weights.h5
+.azure_secret
