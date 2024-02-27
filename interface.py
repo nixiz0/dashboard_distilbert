@@ -7,7 +7,8 @@ import tensorflow as tf
 from collections import Counter
 from dotenv import load_dotenv
 from azure.storage.blob import BlobServiceClient
-from transformers import DistilBertTokenizer, TFDistilBertForSequenceClassification
+from tensorflow.keras.models import load_model
+from transformers import DistilBertTokenizer
 
 
 # To run Locally the streamlit app :
@@ -84,39 +85,52 @@ azure_storage_account_key = os.getenv('AZURE_BLOB_KEY')
 azure_storage_account_name = "distilbert"
 container_name = "modeldistilbert"
 
-def download_from_azure_storage(file_name):
+def download_from_azure_storage():
     blob_service_client = BlobServiceClient.from_connection_string(
         f"DefaultEndpointsProtocol=https;AccountName={azure_storage_account_name};AccountKey={azure_storage_account_key}"
     )
-    blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_name)
-    with open(file_name, "wb") as download_file:
-        download_file.write(blob_client.download_blob().readall())
+    container_client = blob_service_client.get_container_client(container_name)
+    
+    # Create the folder if it does not already exist
+    os.makedirs('distilbert', exist_ok=True)
+    os.makedirs('distilbert/variables', exist_ok=True)
+    
+    # Iterate over each blob in the container and download it
+    for blob in container_client.list_blobs():
+        blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob.name)
+        # Check if the blob is in the 'distilbert/variables' folder
+        if 'distilbert/variables' in blob.name:
+            # Get the file name after the 'distilbert/variables/' part
+            split_name = blob.name.split('distilbert/variables/')
+            if len(split_name) > 1:
+                file_name = split_name[1]
+                with open(os.path.join('distilbert/variables', file_name), "wb") as download_file:
+                    download_file.write(blob_client.download_blob().readall())
+        # Check if the blob is in the 'distilbert' folder but not in the 'variables' subfolder
+        elif 'distilbert' in blob.name and 'variables' not in blob.name:
+            # Get the file name after the 'distilbert/' part
+            split_name = blob.name.split('distilbert/')
+            if len(split_name) > 1:
+                file_name = split_name[1]
+                with open(os.path.join('distilbert', file_name), "wb") as download_file:
+                    download_file.write(blob_client.download_blob().readall())
 
-def load_model():
-    # Load tokenizer_distilbert and model
-    tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
-    # Load the architecture of the model
-    model = TFDistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=6)
-    # Compile the model
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=5e-5),
-                  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-                  metrics=['accuracy'])
-    # Load the weights of the model
-    model.load_weights('distilbert_best_model_weights.h5')
-    return tokenizer, model
+download_from_azure_storage()
 
-download_from_azure_storage('distilbert_best_model_weights.h5')
-tokenizer, model = load_model()
+# Load tokenizer_distilbert and model
+tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+model = load_model("distilbert")
 
 # Emotion prediction
 st.markdown(f"<h2>Emotion prediction</h2>", unsafe_allow_html=True)
 user_input = st.text_input(f"Enter your text here")
 if user_input:
-    user_input_vectorized = tokenizer.encode(user_input, return_tensors='tf')
+    # Encode the user input and get both input_ids and attention_mask
+    user_input_vectorized = tokenizer(user_input, return_tensors='tf', padding=True, truncation=True, max_length=512)
     
     # Predict emotion & Get the predicted class
-    prediction = model.predict(user_input_vectorized)
-    predicted_class_indices = np.argmax(prediction.logits, axis=1)
+    prediction = model(user_input_vectorized)
+    predicted_class_indices = np.argmax(prediction['logits'], axis=1)
 
     # Transform class indices to class names
     predicted_class_names = [emotion_dict[i] for i in predicted_class_indices]
